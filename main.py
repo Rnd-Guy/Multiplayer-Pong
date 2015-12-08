@@ -519,10 +519,13 @@ while not done and host and not connected:
     if ready_to_read:
         last_message, last_message_address = server_socket.recvfrom(1024)
         last_message = last_message.decode()
+        print(last_message)
         if last_message == "Connecting":
             server_socket.sendto("Connecting".encode(), last_message_address)
+            print("Got message \"Connecting\"")
         elif last_message == "Connected":
             server_socket.sendto("Connected".encode(), last_message_address)
+            print("Got message \"Connected\"")
             connected = 1
 
     screen.fill(BLACK)
@@ -559,9 +562,13 @@ while not done and client and not connected:
     if ready_to_read:
         last_message, last_message_address = client_socket.recvfrom(1024)
         last_message = last_message.decode()
+        print(last_message)
         if last_message == "Connecting":
-            server_socket.sendto("Connected", last_message_address)
+            print("Got message \"Connecting\"")
+            print(last_message_address)
+            client_socket.sendto("Connected".encode(), last_message_address)
         elif last_message == "Connected":
+            print("Got message \"Connecting\"")
             connected = 1
 
     screen.fill(BLACK)
@@ -660,6 +667,7 @@ while not done and client and connected:
             done = True  # quit game
 
     # send input to server
+    pressed = pygame.key.get_pressed()
     input_string = ""
     for i in [pressed[pygame.K_LEFT], pressed[pygame.K_DOWN],
               pressed[pygame.K_UP], pressed[pygame.K_RIGHT]]:
@@ -673,7 +681,7 @@ while not done and client and connected:
     ready_to_read = select.select([client_socket], [], [], 0)[0]
 
     # if message received translate it into game input
-    ready_to_read, ready_to_write, in_error = select.select([server_socket], [], [], 0)
+    ready_to_read, ready_to_write, in_error = select.select([client_socket], [], [], 0)
     if ready_to_read:
         # check if packet begins with p or s
         while ready_to_read:
@@ -694,7 +702,7 @@ while not done and client and connected:
                 comma_index = last_message.index(",")
                 main_ball.direction = int(last_message[:comma_index])
             # if message does not begin with s, check if there's more messages and evaluate the last one
-            ready_to_read, ready_to_write, in_error = select.select([server_socket], [], [], 0)
+            ready_to_read, ready_to_write, in_error = select.select([client_socket], [], [], 0)
 
         # evaluate last message received
         if last_message[1] == "p":
