@@ -125,6 +125,8 @@ class Ball:
         self.direction = direction
         self.x = x
         self.y = y
+        if (70 < self.direction < 110) or (250 < self.direction < 290):
+            self.reset_ball()
 
     def reset_ball(self):
         self.x = 316
@@ -132,6 +134,8 @@ class Ball:
         self.speed = 3.2
         self.direction = random.randrange(360)
         self.delay = 60
+        if (70 < self.direction < 110) or (250 < self.direction < 290):
+            return self.reset_ball()
 
     def check_paddle_collision(self, paddle):
         # if any of the corners of the ball is inside the paddle, return True
@@ -153,8 +157,8 @@ class Ball:
 
             # collision with paddle
             if (self.check_paddle_collision(player_paddle) or
-                    self.check_paddle_collision(cpu_paddle) or
-                    self.check_paddle_collision(player2_paddle)):
+                    (single_player and self.check_paddle_collision(cpu_paddle)) or
+                    (not single_player and self.check_paddle_collision(player2_paddle))):
                 self.direction += 2*(90 - self.direction)
                 self.direction %= 360
                 self.speed *= 1.1
@@ -168,7 +172,10 @@ class Ball:
                 scored = 2
                 self.reset_ball()
                 player_paddle.reset_paddle()
-                cpu_paddle.reset_paddle()
+                if single_player:
+                    cpu_paddle.reset_paddle()
+                else:
+                    player2_paddle.reset_paddle()
             # exits right side of screen
             if self.x > 640:
                 global player_score
@@ -177,7 +184,10 @@ class Ball:
                 scored = 1
                 self.reset_ball()
                 player_paddle.reset_paddle()
-                cpu_paddle.reset_paddle()
+                if single_player:
+                    cpu_paddle.reset_paddle()
+                else:
+                    player2_paddle.reset_paddle()
             # rebound if at top or bottom of screen
             if self.y < 0 or self.y > size[1]-self.height:
                 self.direction *= -1
@@ -581,7 +591,6 @@ while not done and client and not connected:
     # update screen
     pygame.display.flip()
 
-
 # starting the game: server
 # server sends "p,player1.x,player1.y,player2.x,player2.y," where player1.x is the x pos of player_paddle
 #   or server sends "s,who_scored,ball.speed,ball.dir" to get direction of ball after a goal is scored
@@ -604,14 +613,14 @@ while not done and host and connected:
         player_paddle.move_paddle_left()
 
     # check if any message is received
-    ready_to_read = select.select([client_socket], [], [], 0)[0]
+    ready_to_read = select.select([server_socket], [], [], 0)[0]
 
     # if message received translate it into game input
     ready_to_read, ready_to_write, in_error = select.select([server_socket], [], [], 0)
     if ready_to_read:
         # take the last packet
         while ready_to_read:
-            last_message, last_message_address = client_socket.recvfrom(1024)
+            last_message, last_message_address = server_socket.recvfrom(1024)
             ready_to_read, ready_to_write, in_error = select.select([server_socket], [], [], 0)
         last_message = last_message.decode()
         # handle client input
@@ -629,16 +638,20 @@ while not done and host and connected:
 
     # send client message if client scored
     if scored > 0:
-        server_socket.sendto(("s," + scored + "," +
-                              main_ball.speed + "," +
-                              main_ball.direction + ",").encode(), last_message_address)
+        server_socket.sendto(("s," + str(scored) + "," +
+                              str(main_ball.speed) + "," +
+                              str(main_ball.direction) + ",").encode(), last_message_address)
         scored = 0
 
+    # send client ball position
+    server_socket.sendto(("b," + str(main_ball.x) + "," +
+                          str(main_ball.y) + ",").encode(), last_message_address)
+
     # send new positions
-    server_socket.sendto(("p," + player_paddle.x + "," +
-                          player_paddle.y + "," +
-                          player2_paddle.x + "," +
-                          player2_paddle.y + ",").encode(), last_message_address)
+    server_socket.sendto(("p," + str(player_paddle.x) + "," +
+                          str(player_paddle.y) + "," +
+                          str(player2_paddle.x) + "," +
+                          str(player2_paddle.y) + ",").encode(), last_message_address)
 
     # drawing code
     screen.fill(BLACK)
@@ -682,49 +695,67 @@ while not done and client and connected:
 
     # if message received translate it into game input
     ready_to_read, ready_to_write, in_error = select.select([client_socket], [], [], 0)
-    if ready_to_read:
-        # check if packet begins with p or s
-        while ready_to_read:
-            last_message, last_message_address = client_socket.recvfrom(1024)
-            last_message = last_message.decode()
-            # if it begins with s, evaluate message
-            if last_message[0] == "s":
-                # "s,p,spd,dir," where p is the num of player who scored
-                main_ball.reset_ball()
-                if last_message[2] == 1:
-                    player_score += 1
-                elif last_message[2] == 2:
-                    player2_score += 1
-                last_message = last_message[4:]
-                comma_index = last_message.index(",")
-                main_ball.speed = int(last_message[:comma_index])
-                last_message = last_message[comma_index + 1:]
-                comma_index = last_message.index(",")
-                main_ball.direction = int(last_message[:comma_index])
-            # if message does not begin with s, check if there's more messages and evaluate the last one
-            ready_to_read, ready_to_write, in_error = select.select([client_socket], [], [], 0)
+    while ready_to_read:
+        last_message, last_message_address = client_socket.recvfrom(1024)
+        last_message = last_message.decode()
+        # if it begins with s, update scoreboard
+        if last_message[0] == "s":
+            # "s,p,spd,dir," where p is the num of player who scored
+            main_ball.reset_ball()
+            if last_message[2] == "1":
+                player_score += 1
+            elif last_message[2] == "2":
+                player2_score += 1
+            print("got score")
+            #last_message = last_message[4:]
+            #comma_index = last_message.index(",")
+            #main_ball.speed = float(last_message[:comma_index])
+            #last_message = last_message[comma_index + 1:]
+            #comma_index = last_message.index(",")
+            #main_ball.direction = float(last_message[:comma_index])
 
-        # evaluate last message received
-        if last_message[1] == "p":
+        # if message does not begin with s, check if there's more messages and evaluate the last one
+        #ready_to_read, ready_to_write, in_error = select.select([client_socket], [], [], 0)
+
+        # if message begins with p, evaluate paddle positions
+        if last_message[0] == "p":
+
             # "p,p1x,p1y,p2x,p2y," where p1x = player_paddle.x, p2y = player2_paddle.y etc.
             last_message = last_message[2:]
             comma_index = last_message.index(",")
-            player_paddle.x = int(last_message[:comma_index])
-            last_message = last_message[comma_index + 1:]
-            comma_index = last_message.index(",")
-            player_paddle.y = int(last_message[:comma_index])
-            last_message = last_message[comma_index + 1:]
-            comma_index = last_message.index(",")
-            player2_paddle.x = int(last_message[:comma_index])
-            last_message = last_message[comma_index + 1:]
-            comma_index = last_message.index(",")
-            player2_paddle.y = int(last_message[:comma_index])
 
-        last_message = "d" # make sure not to read same message more than once
+            player_paddle.x = float(last_message[:comma_index])
+            last_message = last_message[comma_index + 1:]
+            comma_index = last_message.index(",")
+
+            player_paddle.y = float(last_message[:comma_index])
+            last_message = last_message[comma_index + 1:]
+            comma_index = last_message.index(",")
+
+            player2_paddle.x = float(last_message[:comma_index])
+            last_message = last_message[comma_index + 1:]
+            comma_index = last_message.index(",")
+
+            player2_paddle.y = float(last_message[:comma_index])
+
+        if last_message[0] == "b":
+            # "b,x,y," where x,y are ball positions
+            last_message = last_message[2:]
+            comma_index = last_message.index(",")
+
+            main_ball.x = float(last_message[:comma_index])
+
+            last_message = last_message[comma_index + 1:]
+            comma_index = last_message.index(",")
+
+            main_ball.y = float(last_message[:comma_index])
+
+        ready_to_read, ready_to_write, in_error = select.select([client_socket], [], [], 0)
+        #last_message = "done" # make sure not to read same message more than once
 
     # game logic
-    for ball in ball_list:
-        ball.update()
+    #for ball in ball_list:
+    #    ball.update()
 
     # drawing code
     screen.fill(BLACK)
