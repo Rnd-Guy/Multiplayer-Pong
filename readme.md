@@ -1,9 +1,6 @@
 ###Multiplayer Pong! v0.3.0
 
-Modules used:  
-Pygame (GUI)  
-PyInstaller (Compile into .exe)  
-
+Made using python, pygame (GUI) and pyinstaller (compile into .exe)  
 Font used: Prototype.ttf (Free font)	    
 
 This is my attempt of using sockets to create a multiplayer game that connects over the internet. Game is server-hosted, so the server plays the game and the client gets the information from the server.
