@@ -16,7 +16,7 @@ Exe cannot run on certain computers (unknown why)
 If client picks his own ip to connect to, the client immediately crashes (socket tries to connect to itself and fails)
 
 #####Changelog:
-0.3.0:	(Finally got it able to debug on one computer)
+0.3.0:	(Finally got it able to debug on one computer)  
 	Feature: Multiplayer over internet might actually work now  
 	Bug fix: Server calls wrong socket and crashes.  
 	Bug fix: Fixed desyncing between server and client (by sending more info from server to client)  
@@ -32,4 +32,4 @@ If client picks his own ip to connect to, the client immediately crashes (socket
 0.1.0:	First upload (so I can download it on a different computer to test the multiplayer)  
 
 #####Preview  
-![Preview]()
+![Preview](/Images/Gameplay.PNG)
