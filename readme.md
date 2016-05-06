@@ -2,12 +2,9 @@
 
 Modules used:  
 Pygame (GUI)  
-	      PyInstaller (Compile into .exe)
+PyInstaller (Compile into .exe)  
 
 Font used: Prototype.ttf (Free font)	    
-
-
-
 
 This is my attempt of using sockets to create a multiplayer game that connects over the internet. Game is server-hosted, so the server plays the game and the client gets the information from the server.
 
@@ -18,7 +15,7 @@ Local multiplayer: Arrow keys to control left paddle, WASD keys to control right
 Online multiplayer: Arrow keys to control the paddle. The host uses the left paddle, while the client uses the right paddle.  
 
 #####Issues:
-Exe cannot run on certain computers (unknown why)
+Exe cannot run on certain computers (unknown why)  
 If client picks his own ip to connect to, the client immediately crashes (socket tries to connect to itself and fails)
 
 #####Changelog:
